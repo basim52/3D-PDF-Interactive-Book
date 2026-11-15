@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-display: "Cairo", system-ui, -apple-system, sans-serif;
+    --font-body: "IBM Plex Sans Arabic", system-ui, -apple-system, sans-serif;
+    --font-classical: "Amiri", Georgia, serif;
+    --font-mono: "IBM Plex Mono", monospace;
+  }
+
+  html,
+  body {
+    font-family: var(--font-body);
+    direction: rtl;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  .font-classical {
+    font-family: var(--font-classical);
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* 3D Open Book Perspective & Page Flip Physics */
+.book-stage {
+  perspective: 2400px;
+  perspective-origin: 50% 45%;
+}
+
+.book-3d-shell {
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.book-page-surface {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.book-flip-sheet {
+  transform-style: preserve-3d;
+  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
+.book-flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.book-flip-face-back {
+  transform: rotateY(180deg);
+}
+
+/* Subtle paper grain & center spine gutter shading */
+.page-gutter-right {
+  background-image: linear-gradient(
+    to left,
+    rgba(15, 23, 42, 0.14) 0%,
+    rgba(15, 23, 42, 0.05) 3.5%,
+    rgba(15, 23, 42, 0) 9%
+  );
+}
+
+.page-gutter-left {
+  background-image: linear-gradient(
+    to right,
+    rgba(15, 23, 42, 0.14) 0%,
+    rgba(15, 23, 42, 0.05) 3.5%,
+    rgba(15, 23, 42, 0) 9%
+  );
+}
+
+/* Clean minimal scrollbar inside book pages */
+.book-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.book-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.book-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.25);
+  border-radius: 999px;
+}
+
+.book-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .book-3d-shell,
+  .book-flip-sheet {
+    transition-duration: 0.01ms !important;
+  }
+}

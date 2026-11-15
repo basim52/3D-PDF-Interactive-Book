@@ -1,0 +1,10 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+# Exclude oversized PDF files (>100 MB GitHub limit) from repository commits
+public/assets/aistudio/*.pdf
