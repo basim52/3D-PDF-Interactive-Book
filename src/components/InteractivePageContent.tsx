@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { BookPageData, ContentBlock, Model3DId, PageAnswerState } from '../types/book';
 import { GLOSSARY_TERMS } from '../data/glossary';
+import { MAX_BOOK_PAGE } from '../data/chapters/index';
 import { PdfPageCanvas } from './PdfPageCanvas';
 import { PageQuizPanel } from './PageQuizPanel';
 
@@ -550,7 +551,7 @@ export const InteractivePageContent: React.FC<InteractivePageContentProps> = ({
       <div className="px-4 sm:px-5 py-2 border-t border-stone-200/80 bg-stone-50/70 flex items-center justify-between text-[11px] text-stone-500">
         <span className="truncate">{page.lessonTitle || page.chapterTitle}</span>
         <span className="font-mono font-bold text-stone-700 tabular-nums">
-          {page.pageNumber} / ٢١٣
+          {page.pageNumber} / {MAX_BOOK_PAGE}
         </span>
       </div>
     </div>

@@ -7,9 +7,17 @@ import {
   BookMarked,
   SlidersHorizontal,
   GraduationCap,
+  Home,
 } from 'lucide-react';
-import { ALL_BOOK_PAGES, getPageByNumber, getSpreadForPage, TOTAL_BOOK_PAGES } from './data/chapters/index';
+import {
+  ALL_BOOK_PAGES,
+  getPageByNumber,
+  getSpreadForPage,
+  MAX_BOOK_PAGE,
+  MIN_BOOK_PAGE,
+} from './data/chapters/index';
 import { Model3DId, StudentProgress } from './types/book';
+import { LandingPage } from './components/LandingPage';
 import { OpenBook3D } from './components/OpenBook3D';
 import { Science3DStage } from './components/Science3DStage';
 import { TableOfContentsDrawer } from './components/TableOfContentsDrawer';
@@ -21,7 +29,7 @@ const STORAGE_KEY = 'science_g6_3d_book_progress_v1';
 
 const DEFAULT_PROGRESS: StudentProgress = {
   answers: {},
-  visitedPages: [1],
+  visitedPages: [MIN_BOOK_PAGE],
   bookmarks: [],
   notes: {},
   masteredTerms: [],
@@ -32,10 +40,16 @@ function loadProgress(): StudentProgress {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_PROGRESS;
     const parsed = JSON.parse(raw) as Partial<StudentProgress>;
+    const validVisited = Array.isArray(parsed.visitedPages)
+      ? parsed.visitedPages.filter((n) => n >= MIN_BOOK_PAGE && n <= MAX_BOOK_PAGE)
+      : [];
+    const validBookmarks = Array.isArray(parsed.bookmarks)
+      ? parsed.bookmarks.filter((n) => n >= MIN_BOOK_PAGE && n <= MAX_BOOK_PAGE)
+      : [];
     return {
       answers: parsed.answers ?? {},
-      visitedPages: Array.isArray(parsed.visitedPages) ? parsed.visitedPages : [1],
-      bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks : [],
+      visitedPages: validVisited.length > 0 ? validVisited : [MIN_BOOK_PAGE],
+      bookmarks: validBookmarks,
       notes: parsed.notes ?? {},
       masteredTerms: Array.isArray(parsed.masteredTerms) ? parsed.masteredTerms : [],
     };
@@ -48,13 +62,14 @@ export function App() {
   const [currentPage, setCurrentPage] = useState<number>(() => {
     try {
       const saved = localStorage.getItem('science_g6_last_page');
-      const num = saved ? parseInt(saved, 10) : 1;
-      return !Number.isNaN(num) && num >= 1 && num <= TOTAL_BOOK_PAGES ? num : 1;
+      const num = saved ? parseInt(saved, 10) : MIN_BOOK_PAGE;
+      return !Number.isNaN(num) && num >= MIN_BOOK_PAGE && num <= MAX_BOOK_PAGE ? num : MIN_BOOK_PAGE;
     } catch {
-      return 1;
+      return MIN_BOOK_PAGE;
     }
   });
 
+  const [showLanding, setShowLanding] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [tiltEnabled, setTiltEnabled] = useState(true);
   const [progress, setProgress] = useState<StudentProgress>(loadProgress);
@@ -103,7 +118,7 @@ export function App() {
   }, [currentPage, currentPageData]);
 
   const handleNavigatePage = useCallback((targetPage: number) => {
-    const clamped = Math.max(1, Math.min(TOTAL_BOOK_PAGES, targetPage));
+    const clamped = Math.max(MIN_BOOK_PAGE, Math.min(MAX_BOOK_PAGE, targetPage));
     setCurrentPage(clamped);
     const spread = getSpreadForPage(clamped);
     setProgress((prev) => {
@@ -114,28 +129,41 @@ export function App() {
     });
   }, []);
 
+  const handleEnterBook = useCallback(
+    (targetPage?: number, mode: ViewMode = 'split') => {
+      const pageToOpen = targetPage ?? currentPage;
+      handleNavigatePage(pageToOpen);
+      setViewMode(mode);
+      setShowLanding(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    },
+    [currentPage, handleNavigatePage],
+  );
+
   // Arabic RTL keyboard navigation: ArrowLeft advances forward, ArrowRight goes back
   useEffect(() => {
+    if (showLanding) return;
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       const spread = getSpreadForPage(currentPage);
+      const firstEven = MIN_BOOK_PAGE + 1;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        if (currentPage === 1) handleNavigatePage(2);
-        else if ((spread.rightPage ?? 2) + 2 <= TOTAL_BOOK_PAGES) {
-          handleNavigatePage((spread.rightPage ?? 2) + 2);
+        if (currentPage === MIN_BOOK_PAGE) handleNavigatePage(firstEven);
+        else if ((spread.rightPage ?? firstEven) + 2 <= MAX_BOOK_PAGE) {
+          handleNavigatePage((spread.rightPage ?? firstEven) + 2);
         }
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
-        if (currentPage <= 1) return;
-        if (spread.rightPage === 2) handleNavigatePage(1);
-        else handleNavigatePage(Math.max(2, (spread.rightPage ?? 2) - 2));
+        if (currentPage <= MIN_BOOK_PAGE) return;
+        if (spread.rightPage === firstEven) handleNavigatePage(MIN_BOOK_PAGE);
+        else handleNavigatePage(Math.max(firstEven, (spread.rightPage ?? firstEven) - 2));
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [currentPage, handleNavigatePage]);
+  }, [showLanding, currentPage, handleNavigatePage]);
 
   const handleAnswer = useCallback(
     (questionId: string, selectedIndex: number, isCorrect: boolean) => {
@@ -218,6 +246,35 @@ export function App() {
   const rightSpreadPage = spread.rightPage ? getPageByNumber(spread.rightPage) : undefined;
   const leftSpreadPage = spread.leftPage ? getPageByNumber(spread.leftPage) : undefined;
 
+  if (showLanding) {
+    return (
+      <>
+        <LandingPage
+          savedPage={currentPage}
+          answers={progress.answers}
+          visitedPages={progress.visitedPages}
+          onEnterBook={handleEnterBook}
+          onOpenStudyHub={() => setStudyHubOpen(true)}
+        />
+
+        <StudentStudyHubModal
+          isOpen={studyHubOpen}
+          answers={progress.answers}
+          visitedPages={progress.visitedPages}
+          notes={progress.notes ?? {}}
+          masteredTerms={progress.masteredTerms ?? []}
+          onClose={() => setStudyHubOpen(false)}
+          onJumpToPage={(pageNum) => {
+            setStudyHubOpen(false);
+            handleEnterBook(pageNum, 'split');
+          }}
+          onAnswer={handleAnswer}
+          onToggleMasteredTerm={handleToggleMasteredTerm}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f4f1ea] text-stone-900 flex flex-col">
       {/* 3-Zone Top Navigation Bar */}
@@ -225,7 +282,8 @@ export function App() {
         {/* Zone 1: Brand Title */}
         <button
           type="button"
-          onClick={() => handleNavigatePage(1)}
+          onClick={() => setShowLanding(true)}
+          title="العودة للصفحة الرئيسية"
           className="flex items-center gap-2.5 text-right whitespace-nowrap shrink-0"
         >
           <span className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-teal-700 text-white">
@@ -237,7 +295,16 @@ export function App() {
         </button>
 
         {/* Zone 2: Navigation & View Mode Links */}
-        <nav className="hidden md:flex items-center gap-6 text-xs font-bold whitespace-nowrap shrink-0">
+        <nav className="hidden md:flex items-center gap-5 text-xs font-bold whitespace-nowrap shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowLanding(true)}
+            className="inline-flex items-center gap-1 py-1 border-b-2 border-transparent text-stone-600 hover:text-stone-900 transition-colors"
+          >
+            <Home className="w-3.5 h-3.5" />
+            <span>الرئيسية</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setViewMode('split')}
@@ -333,7 +400,14 @@ export function App() {
       </header>
 
       {/* Mobile Compact View Bar */}
-      <div className="flex md:hidden items-center justify-between gap-2 px-4 py-2 border-b border-stone-200 bg-white text-xs font-bold">
+      <div className="flex md:hidden items-center justify-between gap-1.5 px-3 py-2 border-b border-stone-200 bg-white text-xs font-bold">
+        <button
+          type="button"
+          onClick={() => setShowLanding(true)}
+          className="px-2.5 py-1 rounded text-stone-600 border border-stone-200"
+        >
+          الرئيسية
+        </button>
         <button
           type="button"
           onClick={() => setViewMode('split')}
@@ -370,7 +444,7 @@ export function App() {
         {(viewMode === 'split' || viewMode === 'lab3d') && (
           <section aria-label="المختبر ثلاثي الأبعاد">
             {/* Switch between Right Page / Left Page 3D Model when open spread has two different focuses */}
-            {currentPage >= 2 && (rightSpreadPage || leftSpreadPage) && (
+            {currentPage >= MIN_BOOK_PAGE + 1 && (rightSpreadPage || leftSpreadPage) && (
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2 px-1">
                 <div className="flex items-center gap-2 text-xs text-stone-600">
                   <span className="font-bold text-stone-800">الشرح ثلاثي الأبعاد المرتبط بالصفحة:</span>

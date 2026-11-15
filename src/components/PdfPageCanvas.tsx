@@ -110,7 +110,7 @@ export const PdfPageCanvas: React.FC<PdfPageCanvasProps> = ({ pageNumber }) => {
           <AlertCircle className="w-7 h-7 text-amber-600 mb-2" />
           <p className="text-sm font-semibold">تعذر تحميل ملف PDF المرفق تلقائيًا.</p>
           <p className="text-xs text-stone-500 mt-1 max-w-sm leading-relaxed">
-            يمكنك متابعة «التنسيق التفاعلي» لجميع الصفحات الـ ٢١٣ أو اختيار ملف PDF الكتاب من جهازك لعرض الصفحة الأصلية.
+            يمكنك متابعة «التنسيق التفاعلي» لجميع الصفحات الـ ٢٠٧ (٧ — ٢١٣) أو اختيار ملف PDF الكتاب من جهازك لعرض الصفحة الأصلية.
           </p>
           <input
             ref={fileInputRef}

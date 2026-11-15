@@ -23,6 +23,8 @@ const PAGE_MAP = new Map<number, BookPageData>(
   ALL_BOOK_PAGES.map((page) => [page.pageNumber, page]),
 );
 
+export const MIN_BOOK_PAGE = ALL_BOOK_PAGES[0]?.pageNumber ?? 7;
+export const MAX_BOOK_PAGE = ALL_BOOK_PAGES[ALL_BOOK_PAGES.length - 1]?.pageNumber ?? 213;
 export const TOTAL_BOOK_PAGES = ALL_BOOK_PAGES.length;
 
 export function getPageByNumber(pageNumber: number): BookPageData | undefined {
@@ -30,22 +32,22 @@ export function getPageByNumber(pageNumber: number): BookPageData | undefined {
 }
 
 /**
- * Arabic RTL open-book spread pairing:
- * Page 1 = Cover alone [1]
- * Page 2k, 2k+1 = Right page (even), Left page (odd) -> [2,3], [4,5], ..., [212,213]
+ * Arabic RTL open-book spread pairing (starts at page 7 after omitting pages 1–6):
+ * Page 7 = First opener alone [7]
+ * Page 2k, 2k+1 = Right page (even), Left page (odd) -> [8,9], [10,11], ..., [212,213]
  */
 export function getSpreadForPage(pageNumber: number): {
   rightPage: number | null;
   leftPage: number | null;
 } {
-  const clamped = Math.max(1, Math.min(213, Math.round(pageNumber)));
-  if (clamped === 1) {
-    return { rightPage: null, leftPage: 1 };
+  const clamped = Math.max(MIN_BOOK_PAGE, Math.min(MAX_BOOK_PAGE, Math.round(pageNumber)));
+  if (clamped === MIN_BOOK_PAGE) {
+    return { rightPage: null, leftPage: MIN_BOOK_PAGE };
   }
   if (clamped % 2 === 0) {
     return {
       rightPage: clamped,
-      leftPage: clamped + 1 <= 213 ? clamped + 1 : null,
+      leftPage: clamped + 1 <= MAX_BOOK_PAGE ? clamped + 1 : null,
     };
   }
   return {
@@ -58,13 +60,13 @@ export const CHAPTER_NAV_GROUPS: ChapterNavGroup[] = [
   {
     id: 'front_matter',
     unitTitle: 'المقدمة والمنهجية العلمية',
-    title: 'تمهيد الكتاب والطريقة العلمية',
-    startPage: 1,
+    title: 'أعمل كالعلماء والطريقة العلمية',
+    startPage: 7,
     endPage: 18,
     accent: 'sky',
     model3dId: 'comet_method',
     lessons: [
-      { title: 'غلاف الكتاب وفهرسه', page: 1 },
+      { title: 'أعمل كالعلماء — استهلال (مذنب هالي)', page: 7 },
       { title: 'أدرس كالعلماء (المذنب هيل-بوب)', page: 8 },
       { title: 'ما عمل العلماء؟ وتقصي الملاحظات', page: 12 },
       { title: 'خطوات الطريقة العلمية والمذنب', page: 16 },

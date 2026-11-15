@@ -182,7 +182,7 @@ export function buildScienceModel(id: Model3DId): BuiltScienceModel {
       new THREE.MeshStandardMaterial({ color: '#0f766e', roughness: 0.5, metalness: 0.1 }),
     );
     spine.position.set(0, 0.25, 0);
-    registerPart(spine, parts, 'spine', 'كعب الكتاب العربي (من اليمين لليسار)', 'يربط الكعب صفحات الكتاب العربي الـ ٢١٣ ليتصفح من اليمين إلى اليسار.', [0, -0.15, 0]);
+    registerPart(spine, parts, 'spine', 'كعب الكتاب العربي (من اليمين لليسار)', 'يربط الكعب صفحات المنهج العربي الـ ٢٠٧ ليتصفح من اليمين إلى اليسار.', [0, -0.15, 0]);
     group.add(spine);
 
     const rightWing = new THREE.Mesh(
@@ -191,7 +191,7 @@ export function buildScienceModel(id: Model3DId): BuiltScienceModel {
     );
     rightWing.position.set(0.86, 0.34, 0);
     rightWing.rotation.z = 0.09;
-    registerPart(rightWing, parts, 'right_pages', 'الصفحات الزوجية (اليمين)', 'تظهر الصفحات الزوجية (٢، ٤، ٦...) في الجهة اليمنى من الكتاب المفتوح.', [0.55, 0.1, 0]);
+    registerPart(rightWing, parts, 'right_pages', 'الصفحات الزوجية (اليمين)', 'تظهر الصفحات الزوجية (٨، ١٠، ١٢...) في الجهة اليمنى من الكتاب المفتوح.', [0.55, 0.1, 0]);
     group.add(rightWing);
 
     const leftWing = new THREE.Mesh(

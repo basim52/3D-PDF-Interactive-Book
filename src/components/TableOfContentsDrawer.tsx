@@ -1,6 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { X, Search, BookOpen, CheckCircle2, BookmarkCheck, ArrowLeft } from 'lucide-react';
-import { CHAPTER_NAV_GROUPS, ALL_BOOK_PAGES } from '../data/chapters/index';
+import {
+  CHAPTER_NAV_GROUPS,
+  ALL_BOOK_PAGES,
+  MIN_BOOK_PAGE,
+  MAX_BOOK_PAGE,
+  TOTAL_BOOK_PAGES,
+} from '../data/chapters/index';
 import { GLOSSARY_TERMS } from '../data/glossary';
 import { PageAnswerState } from '../types/book';
 
@@ -67,7 +73,7 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
   const handleDirectJump = (e: React.FormEvent) => {
     e.preventDefault();
     const n = parseInt(jumpInput, 10);
-    if (!Number.isNaN(n) && n >= 1 && n <= 213) {
+    if (!Number.isNaN(n) && n >= MIN_BOOK_PAGE && n <= MAX_BOOK_PAGE) {
       onSelectPage(n);
       onClose();
     }
@@ -97,11 +103,11 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
           <form onSubmit={handleDirectJump} className="flex items-center gap-2">
             <input
               type="number"
-              min={1}
-              max={213}
+              min={MIN_BOOK_PAGE}
+              max={MAX_BOOK_PAGE}
               value={jumpInput}
               onChange={(e) => setJumpInput(e.target.value)}
-              placeholder="انتقال سريع لصفحة (١ — ٢١٣)"
+              placeholder={`انتقال سريع لصفحة (${MIN_BOOK_PAGE} — ${MAX_BOOK_PAGE})`}
               className="flex-1 rounded-md border border-stone-200 px-3 py-1.5 text-xs focus:outline-none focus:border-teal-600"
             />
             <button
@@ -133,7 +139,7 @@ export const TableOfContentsDrawer: React.FC<TableOfContentsDrawerProps> = ({
                 tab === 'toc' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-600'
               }`}
             >
-              الفهرس (٢١٣ ص)
+              الفهرس ({TOTAL_BOOK_PAGES} ص)
             </button>
             <button
               type="button"

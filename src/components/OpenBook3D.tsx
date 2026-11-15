@@ -1,7 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronRight, ChevronLeft, BookOpen, Compass } from 'lucide-react';
 import { Model3DId, PageAnswerState } from '../types/book';
-import { getPageByNumber, getSpreadForPage, TOTAL_BOOK_PAGES } from '../data/chapters/index';
+import {
+  getPageByNumber,
+  getSpreadForPage,
+  MAX_BOOK_PAGE,
+  MIN_BOOK_PAGE,
+  TOTAL_BOOK_PAGES,
+} from '../data/chapters/index';
 import { InteractivePageContent } from './InteractivePageContent';
 
 interface OpenBook3DProps {
@@ -64,34 +70,37 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
     }, 360);
   };
 
+  const firstEvenPage = MIN_BOOK_PAGE + 1;
+
   const handleNextSpread = () => {
-    if (currentPage === 1) {
-      triggerFlip('forward', 2);
+    if (currentPage === MIN_BOOK_PAGE) {
+      triggerFlip('forward', firstEvenPage);
       return;
     }
-    const nextRight = (spread.rightPage ?? 2) + 2;
-    if (nextRight <= TOTAL_BOOK_PAGES) {
+    const nextRight = (spread.rightPage ?? firstEvenPage) + 2;
+    if (nextRight <= MAX_BOOK_PAGE) {
       triggerFlip('forward', nextRight);
     }
   };
 
   const handlePrevSpread = () => {
-    if (currentPage <= 1) return;
-    if (spread.rightPage === 2) {
-      triggerFlip('backward', 1);
+    if (currentPage <= MIN_BOOK_PAGE) return;
+    if (spread.rightPage === firstEvenPage) {
+      triggerFlip('backward', MIN_BOOK_PAGE);
       return;
     }
-    const prevRight = Math.max(2, (spread.rightPage ?? 2) - 2);
+    const prevRight = Math.max(firstEvenPage, (spread.rightPage ?? firstEvenPage) - 2);
     triggerFlip('backward', prevRight);
   };
 
-  const progressRatio = currentPage / TOTAL_BOOK_PAGES;
+  const progressRatio =
+    (currentPage - MIN_BOOK_PAGE) / Math.max(1, MAX_BOOK_PAGE - MIN_BOOK_PAGE);
   const rightThicknessPx = Math.max(3, Math.round(progressRatio * 14));
   const leftThicknessPx = Math.max(3, Math.round((1 - progressRatio) * 14));
 
-  const isCover = currentPage === 1;
-  const hasPrev = currentPage > 1;
-  const hasNext = isCover ? true : (spread.leftPage ?? TOTAL_BOOK_PAGES) < TOTAL_BOOK_PAGES;
+  const isOpener = currentPage === MIN_BOOK_PAGE;
+  const hasPrev = currentPage > MIN_BOOK_PAGE;
+  const hasNext = isOpener ? true : (spread.leftPage ?? MAX_BOOK_PAGE) < MAX_BOOK_PAGE;
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -103,20 +112,22 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
             transform: tiltEnabled ? 'rotateX(3.5deg)' : 'rotateX(0deg)',
           }}
         >
-          {isCover && leftData ? (
-            /* Front Cover 3D Standalone View (Page 1) */
+          {isOpener && leftData ? (
+            /* First Page 3D Standalone Opener View (Page 7) */
             <div className="relative mx-auto max-w-[580px] rounded-xl border border-stone-200 bg-[#fffdf8] shadow-inner overflow-hidden h-[640px] flex flex-col">
               <div className="bg-gradient-to-l from-teal-800 to-emerald-900 px-5 py-3 text-white flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-amber-300" />
-                  <span className="text-xs font-bold">غلاف الكتاب المدرسي التفاعلي — ص ١</span>
+                  <span className="text-xs font-bold">
+                    بداية المنهج التفاعلي — ص {MIN_BOOK_PAGE}
+                  </span>
                 </div>
                 <button
                   type="button"
                   onClick={handleNextSpread}
                   className="inline-flex items-center gap-1 rounded-md bg-amber-400 px-3 py-1 text-xs font-extrabold text-stone-950 hover:bg-amber-300 transition-colors"
                 >
-                  <span>فتح الكتاب</span>
+                  <span>افتح الصفحتين التاليتين</span>
                   <ChevronLeft className="w-4 h-4" />
                 </button>
               </div>
@@ -234,7 +245,7 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
                   <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-stone-500">
                     <Compass className="w-10 h-10 text-teal-700 mb-3" />
                     <p className="font-bold text-stone-800">خاتمة الكتاب المدرسي</p>
-                    <p className="text-xs mt-1">أتممت استعراض الصفحات الـ ٢١٣ كاملة.</p>
+                    <p className="text-xs mt-1">أتممت استعراض الصفحات الـ {TOTAL_BOOK_PAGES} كاملة.</p>
                   </div>
                 )}
               </div>
@@ -284,11 +295,13 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
         </button>
 
         <div className="flex items-center gap-3 text-xs text-stone-600">
-          {isCover ? (
-            <span className="font-bold text-stone-900 tabular-nums">الغلاف · صفحة ١ من ٢١٣</span>
+          {isOpener ? (
+            <span className="font-bold text-stone-900 tabular-nums">
+              بداية الكتاب · صفحة {MIN_BOOK_PAGE} (من {MIN_BOOK_PAGE} إلى {MAX_BOOK_PAGE})
+            </span>
           ) : (
             <span className="font-bold text-stone-900 tabular-nums">
-              الصفحتان {spread.rightPage} — {spread.leftPage ?? 'النهاية'} من ٢١٣
+              الصفحتان {spread.rightPage} — {spread.leftPage ?? 'النهاية'} (من {MIN_BOOK_PAGE} إلى {MAX_BOOK_PAGE})
             </span>
           )}
           <span className="hidden sm:inline text-stone-400">|</span>

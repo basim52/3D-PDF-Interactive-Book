@@ -12,7 +12,13 @@ import {
   BookOpen,
   Sparkles,
 } from 'lucide-react';
-import { ALL_BOOK_PAGES, CHAPTER_NAV_GROUPS } from '../data/chapters/index';
+import {
+  ALL_BOOK_PAGES,
+  CHAPTER_NAV_GROUPS,
+  MAX_BOOK_PAGE,
+  MIN_BOOK_PAGE,
+  TOTAL_BOOK_PAGES,
+} from '../data/chapters/index';
 import { GLOSSARY_TERMS } from '../data/glossary';
 import { InteractiveQuestion, PageAnswerState } from '../types/book';
 
@@ -268,7 +274,7 @@ export const StudentStudyHubModal: React.FC<StudentStudyHubModalProps> = ({
                 <div className="rounded-xl border border-stone-200 bg-white p-4">
                   <p className="text-xs font-semibold text-stone-500">الصفحات المتصفحة</p>
                   <p className="text-2xl font-extrabold text-stone-900 mt-1 tabular-nums">
-                    {visitedPages.length} / ٢١٣
+                    {visitedPages.filter((p) => p >= MIN_BOOK_PAGE).length} / {TOTAL_BOOK_PAGES}
                   </p>
                   <p className="text-xs text-stone-600 mt-0.5">صفحة من الكتاب المدرسي</p>
                 </div>
@@ -486,7 +492,9 @@ export const StudentStudyHubModal: React.FC<StudentStudyHubModalProps> = ({
                     onChange={(e) => startPracticeQuiz(e.target.value)}
                     className="rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1.5 text-xs font-semibold text-stone-800"
                   >
-                    <option value="all">جميع فصول الكتاب (١ — ٢١٣)</option>
+                    <option value="all">
+                      جميع فصول الكتاب ({MIN_BOOK_PAGE} — {MAX_BOOK_PAGE})
+                    </option>
                     {CHAPTER_NAV_GROUPS.map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.title}
