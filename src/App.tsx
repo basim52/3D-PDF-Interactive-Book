@@ -6,12 +6,14 @@ import {
   List,
   BookMarked,
   SlidersHorizontal,
+  GraduationCap,
 } from 'lucide-react';
 import { ALL_BOOK_PAGES, getPageByNumber, getSpreadForPage, TOTAL_BOOK_PAGES } from './data/chapters/index';
 import { Model3DId, StudentProgress } from './types/book';
 import { OpenBook3D } from './components/OpenBook3D';
 import { Science3DStage } from './components/Science3DStage';
 import { TableOfContentsDrawer } from './components/TableOfContentsDrawer';
+import { StudentStudyHubModal } from './components/StudentStudyHubModal';
 
 type ViewMode = 'split' | 'book' | 'lab3d';
 
@@ -21,6 +23,8 @@ const DEFAULT_PROGRESS: StudentProgress = {
   answers: {},
   visitedPages: [1],
   bookmarks: [],
+  notes: {},
+  masteredTerms: [],
 };
 
 function loadProgress(): StudentProgress {
@@ -32,6 +36,8 @@ function loadProgress(): StudentProgress {
       answers: parsed.answers ?? {},
       visitedPages: Array.isArray(parsed.visitedPages) ? parsed.visitedPages : [1],
       bookmarks: Array.isArray(parsed.bookmarks) ? parsed.bookmarks : [],
+      notes: parsed.notes ?? {},
+      masteredTerms: Array.isArray(parsed.masteredTerms) ? parsed.masteredTerms : [],
     };
   } catch {
     return DEFAULT_PROGRESS;
@@ -54,6 +60,7 @@ export function App() {
   const [progress, setProgress] = useState<StudentProgress>(loadProgress);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerTab, setDrawerTab] = useState<'toc' | 'glossary' | 'bookmarks'>('toc');
+  const [studyHubOpen, setStudyHubOpen] = useState(false);
 
   const currentPageData = useMemo(
     () => getPageByNumber(currentPage) ?? ALL_BOOK_PAGES[0],
@@ -161,6 +168,27 @@ export function App() {
         bookmarks: exists
           ? prev.bookmarks.filter((n) => n !== pageNumber)
           : [...prev.bookmarks, pageNumber],
+      };
+    });
+  }, []);
+
+  const handleSaveNote = useCallback((pageNumber: number, text: string) => {
+    setProgress((prev) => ({
+      ...prev,
+      notes: {
+        ...(prev.notes ?? {}),
+        [pageNumber]: text,
+      },
+    }));
+  }, []);
+
+  const handleToggleMasteredTerm = useCallback((term: string) => {
+    setProgress((prev) => {
+      const list = prev.masteredTerms ?? [];
+      const exists = list.includes(term);
+      return {
+        ...prev,
+        masteredTerms: exists ? list.filter((t) => t !== term) : [...list, term],
       };
     });
   }, []);
@@ -295,14 +323,11 @@ export function App() {
 
           <button
             type="button"
-            onClick={() => {
-              setDrawerTab('toc');
-              setDrawerOpen(true);
-            }}
+            onClick={() => setStudyHubOpen(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-teal-800 transition-colors"
           >
-            <List className="w-3.5 h-3.5" />
-            <span>انتقل لصفحة</span>
+            <GraduationCap className="w-4 h-4" />
+            <span>مركز المذاكرة والاختبار</span>
           </button>
         </div>
       </header>
@@ -329,6 +354,13 @@ export function App() {
           className={`flex-1 py-1 rounded ${viewMode === 'lab3d' ? 'bg-teal-700 text-white' : 'text-stone-600'}`}
         >
           المجسم ٣D
+        </button>
+        <button
+          type="button"
+          onClick={() => setStudyHubOpen(true)}
+          className="flex-1 py-1 rounded bg-emerald-50 text-teal-800"
+        >
+          المذاكرة
         </button>
       </div>
 
@@ -409,11 +441,13 @@ export function App() {
               currentPage={currentPage}
               answers={progress.answers}
               bookmarks={progress.bookmarks}
+              notes={progress.notes ?? {}}
               tiltEnabled={tiltEnabled}
               onNavigatePage={handleNavigatePage}
               onAnswer={handleAnswer}
               onResetPageQuiz={handleResetPageQuiz}
               onToggleBookmark={handleToggleBookmark}
+              onSaveNote={handleSaveNote}
               onFocus3D={handleFocus3D}
             />
           </section>
@@ -429,6 +463,19 @@ export function App() {
         bookmarks={progress.bookmarks}
         onClose={() => setDrawerOpen(false)}
         onSelectPage={handleNavigatePage}
+      />
+
+      {/* Smart Student Study & Exam Hub Modal */}
+      <StudentStudyHubModal
+        isOpen={studyHubOpen}
+        answers={progress.answers}
+        visitedPages={progress.visitedPages}
+        notes={progress.notes ?? {}}
+        masteredTerms={progress.masteredTerms ?? []}
+        onClose={() => setStudyHubOpen(false)}
+        onJumpToPage={handleNavigatePage}
+        onAnswer={handleAnswer}
+        onToggleMasteredTerm={handleToggleMasteredTerm}
       />
     </div>
   );

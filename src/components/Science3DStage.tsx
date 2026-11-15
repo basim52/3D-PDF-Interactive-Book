@@ -14,6 +14,9 @@ import {
   EyeOff,
   Maximize2,
   Minimize2,
+  Target,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { Model3DId } from '../types/book';
 import { buildScienceModel, BuiltScienceModel, ModelPartInfo } from '../three/models';
@@ -72,6 +75,14 @@ export const Science3DStage: React.FC<Science3DStageProps> = ({
   const [textVisible, setTextVisible] = useState(true);
   const [webglError, setWebglError] = useState(false);
 
+  // Interactive 3D Find-the-Part Challenge
+  const [quiz3dActive, setQuiz3dActive] = useState(false);
+  const [quiz3dStep, setQuiz3dStep] = useState(0);
+  const [quiz3dScore, setQuiz3dScore] = useState(0);
+  const [quiz3dFeedback, setQuiz3dFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [quiz3dLastWrongLabel, setQuiz3dLastWrongLabel] = useState('');
+  const onMeshPickRef = useRef<(key: string, labelAr: string, descAr: string) => void>(() => {});
+
   useEffect(() => {
     explodeTargetRef.current = explodeVal;
   }, [explodeVal]);
@@ -84,8 +95,48 @@ export const Science3DStage: React.FC<Science3DStageProps> = ({
     autoRotateRef.current = autoRotate;
   }, [autoRotate]);
 
+  // Reset 3D part challenge when model changes
+  useEffect(() => {
+    setQuiz3dActive(false);
+    setQuiz3dStep(0);
+    setQuiz3dScore(0);
+    setQuiz3dFeedback(null);
+    setQuiz3dLastWrongLabel('');
+  }, [modelId]);
+
+  useEffect(() => {
+    onMeshPickRef.current = (key: string, labelAr: string, descAr: string) => {
+      if (quiz3dActive && partsMeta.length > 0) {
+        const target = partsMeta[quiz3dStep];
+        if (!target) return;
+        selectedKeyRef.current = key;
+        if (key === target.key) {
+          setQuiz3dFeedback('correct');
+          setQuiz3dScore((s) => s + 1);
+          setSelectedPart({ key, labelAr, descAr });
+          window.setTimeout(() => {
+            setQuiz3dFeedback(null);
+            setQuiz3dLastWrongLabel('');
+            if (quiz3dStep + 1 < partsMeta.length) {
+              setQuiz3dStep((st) => st + 1);
+            } else {
+              setQuiz3dStep(partsMeta.length);
+            }
+          }, 950);
+        } else {
+          setQuiz3dFeedback('wrong');
+          setQuiz3dLastWrongLabel(labelAr);
+        }
+        return;
+      }
+      selectedKeyRef.current = key;
+      setSelectedPart({ key, labelAr, descAr });
+    };
+  }, [quiz3dActive, quiz3dStep, partsMeta]);
+
   // Sync focus part when page changes
   useEffect(() => {
+    if (quiz3dActive) return;
     selectedKeyRef.current = focusPartKey ?? null;
     if (focusPartKey && partsMeta.length > 0) {
       const found = partsMeta.find((p) => p.key === focusPartKey);
@@ -94,7 +145,7 @@ export const Science3DStage: React.FC<Science3DStageProps> = ({
       setSelectedPart(partsMeta[0]);
       selectedKeyRef.current = partsMeta[0].key;
     }
-  }, [focusPartKey, partsMeta]);
+  }, [focusPartKey, partsMeta, quiz3dActive]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -238,12 +289,11 @@ export const Science3DStage: React.FC<Science3DStageProps> = ({
       for (const hit of hits) {
         const key = hit.object.userData?.partKey as string | undefined;
         if (key) {
-          selectedKeyRef.current = key;
-          setSelectedPart({
+          onMeshPickRef.current(
             key,
-            labelAr: hit.object.userData.labelAr || key,
-            descAr: hit.object.userData.descAr || '',
-          });
+            hit.object.userData.labelAr || key,
+            hit.object.userData.descAr || '',
+          );
           break;
         }
       }
@@ -463,21 +513,111 @@ export const Science3DStage: React.FC<Science3DStageProps> = ({
       {/* Attached Explanation & Control Panel Below the 3D Canvas (Zero overlap with 3D model!) */}
       {textVisible && dockOpen && (
         <div className="border-t border-slate-200 bg-white p-3.5">
-          {/* Selected Part Explanation */}
-          {selectedPart && (
-            <div className="mb-2.5 pb-2 border-b border-slate-100">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-bold text-slate-900">{selectedPart.labelAr}</span>
-                <span className="text-[11px] font-medium text-teal-700 tabular-nums">
-                  {partsMeta.findIndex((p) => p.key === selectedPart.key) + 1} / {partsMeta.length} أجزاء
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{selectedPart.descAr}</p>
+          {/* Interactive 3D Challenge Mode Bar */}
+          {quiz3dActive ? (
+            <div className="mb-3 rounded-lg border border-teal-200 bg-teal-50/70 p-3">
+              {quiz3dStep >= partsMeta.length ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-teal-950">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    <span>
+                      أحسنت! حدّدت {quiz3dScore} من {partsMeta.length} أجزاء بنجاح على المجسم.
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuiz3dStep(0);
+                        setQuiz3dScore(0);
+                        setQuiz3dFeedback(null);
+                      }}
+                      className="rounded-md bg-teal-700 px-3 py-1 text-xs font-bold text-white hover:bg-teal-800"
+                    >
+                      إعادة التحدي
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQuiz3dActive(false)}
+                      className="rounded-md border border-stone-300 bg-white px-3 py-1 text-xs font-bold text-stone-700"
+                    >
+                      إنهاء
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-teal-950">
+                      <Target className="w-4 h-4 text-teal-700 shrink-0" />
+                      <span>
+                        اضغط مباشرة على المجسم لتحديد: «{partsMeta[quiz3dStep]?.labelAr}»
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-teal-800 tabular-nums">
+                        {quiz3dStep + 1} / {partsMeta.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setQuiz3dActive(false)}
+                        className="rounded border border-teal-300 bg-white px-2 py-0.5 text-[11px] font-bold text-teal-900"
+                      >
+                        خروج من التحدي
+                      </button>
+                    </div>
+                  </div>
+                  {quiz3dFeedback === 'correct' && (
+                    <p className="text-xs font-bold text-emerald-700 flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>إجابة صحيحة! هذا هو الجزء المطلوب.</span>
+                    </p>
+                  )}
+                  {quiz3dFeedback === 'wrong' && (
+                    <p className="text-xs font-bold text-rose-700 flex items-center gap-1">
+                      <XCircle className="w-3.5 h-3.5" />
+                      <span>ضغطت على «{quiz3dLastWrongLabel}» — جرّب تدوير المجسم واضغط على الجزء المطلوب.</span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
+          ) : (
+            /* Selected Part Explanation */
+            selectedPart && (
+              <div className="mb-2.5 pb-2 border-b border-slate-100">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-bold text-slate-900">{selectedPart.labelAr}</span>
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    {partsMeta.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQuiz3dActive(true);
+                          setQuiz3dStep(0);
+                          setQuiz3dScore(0);
+                          setQuiz3dFeedback(null);
+                          setQuiz3dLastWrongLabel('');
+                          selectedKeyRef.current = null;
+                        }}
+                        className="inline-flex items-center gap-1 rounded-md border border-teal-700/30 bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-800 hover:bg-teal-100 transition-colors"
+                      >
+                        <Target className="w-3 h-3" />
+                        <span>اختبرني على المجسم</span>
+                      </button>
+                    )}
+                    <span className="text-[11px] font-medium text-teal-700 tabular-nums">
+                      {partsMeta.findIndex((p) => p.key === selectedPart.key) + 1} / {partsMeta.length} أجزاء
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{selectedPart.descAr}</p>
+              </div>
+            )
           )}
 
-          {/* Part Quick-Select Row */}
-          {partsMeta.length > 0 && (
+          {/* Part Quick-Select Row (Hidden during active 3D find-the-part quiz) */}
+          {!quiz3dActive && partsMeta.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-2 border-b border-slate-100">
               {partsMeta.map((part) => {
                 const active = selectedPart?.key === part.key;

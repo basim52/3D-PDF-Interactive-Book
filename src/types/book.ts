@@ -96,4 +96,6 @@ export interface StudentProgress {
   answers: PageAnswerState;
   visitedPages: number[];
   bookmarks: number[];
+  notes?: Record<number, string>;
+  masteredTerms?: string[];
 }

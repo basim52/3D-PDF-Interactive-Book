@@ -9,6 +9,9 @@ import {
   ArrowLeft,
   BookMarked,
   X,
+  Volume2,
+  VolumeX,
+  NotebookPen,
 } from 'lucide-react';
 import { BookPageData, ContentBlock, Model3DId, PageAnswerState } from '../types/book';
 import { GLOSSARY_TERMS } from '../data/glossary';
@@ -19,6 +22,8 @@ interface InteractivePageContentProps {
   page: BookPageData;
   answers: PageAnswerState;
   isBookmarked: boolean;
+  pageNote: string;
+  onSaveNote: (pageNumber: number, text: string) => void;
   onAnswer: (questionId: string, selectedIndex: number, isCorrect: boolean) => void;
   onResetPageQuiz: (questionIds: string[]) => void;
   onToggleBookmark: (pageNumber: number) => void;
@@ -48,6 +53,8 @@ export const InteractivePageContent: React.FC<InteractivePageContentProps> = ({
   page,
   answers,
   isBookmarked,
+  pageNote,
+  onSaveNote,
   onAnswer,
   onResetPageQuiz,
   onToggleBookmark,
@@ -56,6 +63,54 @@ export const InteractivePageContent: React.FC<InteractivePageContentProps> = ({
 }) => {
   const [displayMode, setDisplayMode] = useState<'interactive' | 'pdf'>('interactive');
   const [activeTerm, setActiveTerm] = useState<string | null>(null);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const speechSupported =
+    typeof window !== 'undefined' && 'speechSynthesis' in window;
+
+  React.useEffect(() => {
+    setIsSpeaking(false);
+    if (speechSupported) {
+      window.speechSynthesis.cancel();
+    }
+    return () => {
+      if (speechSupported) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [page.pageNumber, speechSupported]);
+
+  const handleToggleSpeak = () => {
+    if (!speechSupported) return;
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    window.speechSynthesis.cancel();
+    const conceptTexts = page.blocks
+      .map((b) => {
+        if (b.kind === 'concept') return `${b.title}. ${b.body}`;
+        if (b.kind === 'fact') return `${b.label}. ${b.text}`;
+        if (b.kind === 'points') return `${b.title}. ${b.items.join('، ')}`;
+        return '';
+      })
+      .filter(Boolean)
+      .slice(0, 3)
+      .join(' ');
+    const fullText = `${page.title}. ${page.summary} ${conceptTexts}`;
+    const utt = new SpeechSynthesisUtterance(fullText);
+    utt.lang = 'ar-SA';
+    utt.rate = 0.96;
+    const voices = window.speechSynthesis.getVoices();
+    const arVoice = voices.find((v) => v.lang.startsWith('ar'));
+    if (arVoice) utt.voice = arVoice;
+    utt.onend = () => setIsSpeaking(false);
+    utt.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utt);
+  };
 
   const solvedCount = page.questions.filter((q) => answers[q.id] !== undefined).length;
   const correctCount = page.questions.filter((q) => answers[q.id]?.isCorrect).length;
@@ -348,22 +403,86 @@ export const InteractivePageContent: React.FC<InteractivePageContentProps> = ({
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              onFocus3D(
-                page.model3dId,
-                page.model3dFocusPart,
-                page.model3dTitle,
-                page.model3dHint,
-              )
-            }
-            className="inline-flex items-center gap-1.5 rounded-md border border-teal-700/25 bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-800 hover:bg-teal-100 transition-colors"
-          >
-            <Box className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate max-w-[175px]">{page.model3dTitle}</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {speechSupported && (
+              <button
+                type="button"
+                onClick={handleToggleSpeak}
+                className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-bold transition-colors ${
+                  isSpeaking
+                    ? 'border-amber-500 bg-amber-50 text-amber-900'
+                    : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
+                }`}
+                title="قراءة ملخص وشرح الصفحة صوتيًا"
+              >
+                {isSpeaking ? (
+                  <>
+                    <VolumeX className="w-3.5 h-3.5" />
+                    <span>إيقاف الصوت</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3.5 h-3.5 text-teal-700" />
+                    <span>استمع للشرح</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setNoteOpen((o) => !o)}
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-bold transition-colors ${
+                noteOpen || pageNote.trim().length > 0
+                  ? 'border-amber-300 bg-amber-50 text-amber-900'
+                  : 'border-stone-200 bg-white text-stone-700 hover:bg-stone-50'
+              }`}
+              title="تدوين ملاحظاتك الشخصية على هذه الصفحة"
+            >
+              <NotebookPen className="w-3.5 h-3.5" />
+              <span>{pageNote.trim().length > 0 ? 'ملاحظتي ✓' : 'ملاحظاتي'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                onFocus3D(
+                  page.model3dId,
+                  page.model3dFocusPart,
+                  page.model3dTitle,
+                  page.model3dHint,
+                )
+              }
+              className="inline-flex items-center gap-1.5 rounded-md border border-teal-700/25 bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-800 hover:bg-teal-100 transition-colors"
+            >
+              <Box className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate max-w-[140px]">{page.model3dTitle}</span>
+            </button>
+          </div>
         </div>
+
+        {/* Collapsible Student Margin Notebook */}
+        {noteOpen && (
+          <div className="mt-2.5 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
+            <div className="flex items-center justify-between text-[11px] font-bold text-amber-900 mb-1">
+              <span>دفتر ملاحظاتي — صفحة {page.pageNumber} (يُحفظ تلقائيًا)</span>
+              <button
+                type="button"
+                onClick={() => setNoteOpen(false)}
+                className="text-amber-800 hover:text-amber-950"
+              >
+                إخفاء
+              </button>
+            </div>
+            <textarea
+              rows={2}
+              value={pageNote}
+              onChange={(e) => onSaveNote(page.pageNumber, e.target.value)}
+              placeholder="اكتب تلخيصًا سريعًا أو سؤالاً تود مراجعته في هذه الصفحة..."
+              className="w-full rounded-md border border-amber-200 bg-white px-2.5 py-1.5 text-xs text-stone-800 focus:outline-none focus:border-teal-600"
+            />
+          </div>
+        )}
       </div>
 
       {/* Scrollable Page Body */}

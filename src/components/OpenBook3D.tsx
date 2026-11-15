@@ -8,11 +8,13 @@ interface OpenBook3DProps {
   currentPage: number;
   answers: PageAnswerState;
   bookmarks: number[];
+  notes: Record<number, string>;
   tiltEnabled: boolean;
   onNavigatePage: (pageNumber: number) => void;
   onAnswer: (questionId: string, selectedIndex: number, isCorrect: boolean) => void;
   onResetPageQuiz: (questionIds: string[]) => void;
   onToggleBookmark: (pageNumber: number) => void;
+  onSaveNote: (pageNumber: number, text: string) => void;
   onFocus3D: (modelId: Model3DId, focusPart?: string, title?: string, hint?: string) => void;
 }
 
@@ -20,11 +22,13 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
   currentPage,
   answers,
   bookmarks,
+  notes,
   tiltEnabled,
   onNavigatePage,
   onAnswer,
   onResetPageQuiz,
   onToggleBookmark,
+  onSaveNote,
   onFocus3D,
 }) => {
   const [flipDirection, setFlipDirection] = useState<'forward' | 'backward' | null>(null);
@@ -121,6 +125,8 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
                   page={leftData}
                   answers={answers}
                   isBookmarked={bookmarks.includes(leftData.pageNumber)}
+                  pageNote={notes[leftData.pageNumber] ?? ''}
+                  onSaveNote={onSaveNote}
                   onAnswer={onAnswer}
                   onResetPageQuiz={onResetPageQuiz}
                   onToggleBookmark={onToggleBookmark}
@@ -182,6 +188,8 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
                     page={rightData}
                     answers={answers}
                     isBookmarked={bookmarks.includes(rightData.pageNumber)}
+                    pageNote={notes[rightData.pageNumber] ?? ''}
+                    onSaveNote={onSaveNote}
                     onAnswer={onAnswer}
                     onResetPageQuiz={onResetPageQuiz}
                     onToggleBookmark={onToggleBookmark}
@@ -214,6 +222,8 @@ export const OpenBook3D: React.FC<OpenBook3DProps> = ({
                     page={leftData}
                     answers={answers}
                     isBookmarked={bookmarks.includes(leftData.pageNumber)}
+                    pageNote={notes[leftData.pageNumber] ?? ''}
+                    onSaveNote={onSaveNote}
                     onAnswer={onAnswer}
                     onResetPageQuiz={onResetPageQuiz}
                     onToggleBookmark={onToggleBookmark}
